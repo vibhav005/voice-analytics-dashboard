@@ -1,5 +1,5 @@
 import React from "react";
-
+import image from "../assets/1.png";
 export default function HeroSection() {
   return (
     <section className="relative overflow-hidden">
@@ -37,13 +37,13 @@ export default function HeroSection() {
         </div>
 
         <div className="animate-fade-up [animation-delay:150ms] opacity-0">
-          <div className="demo-card p-4 md:p-5 w-full max-w-md shadow-cardGlow border border-borderDim rounded-xl3 bg-black/40 backdrop-blur-md">
+          <div className="demo-card p-2 md:p-5 w-full max-w-md shadow-cardGlow border border-borderDim rounded-xl3 bg-black/40 backdrop-blur-md">
             <div className="relative w-full rounded-xl border border-borderDim bg-black/80 shadow-inner overflow-hidden">
               <div className="w-full pt-[56.25%]" />
-              <div className="absolute inset-0 flex items-center justify-center p-3">
+              <div className="absolute inset-0 flex items-center justify-center">
                 <img
-                  className="max-w-full max-h-full object-contain rounded-lg"
-                  src="src/assets/2.png"
+                  className="max-w-full max-h-full rounded-lg"
+                  src={image}
                   alt="Product demo preview"
                 />
               </div>

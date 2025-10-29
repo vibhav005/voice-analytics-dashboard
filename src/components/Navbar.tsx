@@ -30,7 +30,7 @@ export default function Navbar() {
           <div className="flex items-center gap-6">
             <Link
               className="nav-link underline underline-offset-4 decoration-mint text-xs md:text-sm"
-              to="/"
+              to="/voice-analytics-dashboard"
             >
               Home
             </Link>
