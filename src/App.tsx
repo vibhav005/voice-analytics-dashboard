@@ -15,15 +15,6 @@ export default function App() {
         <Route path="/voice-analytics-dashboard" element={<LandingPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
       </Routes>
-
-      <footer className="px-6 md:px-10 pb-10 text-[10px] md:text-xs text-textMuted max-w-7xl mx-auto w-full">
-        <div>
-          © {new Date().getFullYear()} VoiceOps IQ. All rights reserved.
-        </div>
-        <div className="mt-2">
-          Built with React + TS + Supabase. Data shown is demo data only.
-        </div>
-      </footer>
     </main>
   );
 }

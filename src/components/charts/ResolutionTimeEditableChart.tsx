@@ -117,7 +117,6 @@ export default function ResolutionTimeEditableChart({ notify }: Props) {
       .eq("email", userEmail)
       .maybeSingle();
 
-    // if they already saved values before, ask if they want to reuse them
     if (row && row.resolution_times) {
       pendingPrevResolutionTimes.current = row.resolution_times || null;
       pendingPrevSla.current =
@@ -130,7 +129,7 @@ export default function ResolutionTimeEditableChart({ notify }: Props) {
       return;
     }
 
-    // otherwise preload current chart values
+    // otherwise preload what's currently on screen
     setInputs(data.map((d) => d.avgResolution));
     setSlaTarget(slaTarget ?? DEFAULT_SLA);
 
@@ -159,7 +158,6 @@ export default function ResolutionTimeEditableChart({ notify }: Props) {
     pendingPrevResolutionTimes.current = null;
     pendingPrevSla.current = null;
     setShowConfirm(false);
-    // don't enter edit mode
   }
 
   // from EmailGateModal
@@ -195,7 +193,7 @@ export default function ResolutionTimeEditableChart({ notify }: Props) {
 
     setLoading(true);
 
-    // fetch other chart columns so we don't blow them away
+    // also fetch call_metrics_* so we don't blow them away
     const { data: existingRow } = await supabase
       .from("custom_metrics")
       .select("call_metrics_calls, call_metrics_fail")
@@ -249,18 +247,18 @@ export default function ResolutionTimeEditableChart({ notify }: Props) {
 
   return (
     <>
-      {/* 1. email gate (first-time users) */}
+      {/* email capture modal */}
       <EmailGateModal
         visible={showEmailModal}
         onSubmitEmail={handleEmailSubmitted}
         onClose={() => setShowEmailModal(false)}
       />
 
-      {/* 2. confirm modal (load saved vs keep current) */}
+      {/* confirm overwrite modal */}
       <ConfirmModal
         visible={showConfirm}
         title="Load your saved values?"
-        body="We found your previously saved resolution times and SLA target. Do you want to load them into the editor? (This will replace what’s currently shown.)"
+        body="We found your previously saved resolution times and SLA target. Do you want to load them into the editor? (This will replace what's currently shown.)"
         confirmLabel="Yes, load mine"
         cancelLabel="No, keep current"
         onConfirm={handleConfirmOverwrite}
@@ -271,13 +269,14 @@ export default function ResolutionTimeEditableChart({ notify }: Props) {
       <div
         className="
           card-glass relative flex flex-col
-          h-[520px]
           border border-borderDim rounded-xl3 shadow-cardGlow
           bg-[radial-gradient(circle_at_20%_0%,rgba(167,243,208,0.08)_0%,rgba(0,0,0,0)_60%)]
+          p-0
+          h-[520px]
           animate-fade-up opacity-0
         "
       >
-        {/* overlay while loading */}
+        {/* loading overlay */}
         {loading && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
             <div className="h-8 w-8 rounded-full border border-mint/40 flex items-center justify-center shadow-[0_0_30px_rgba(167,243,208,0.5)]">
@@ -289,7 +288,7 @@ export default function ResolutionTimeEditableChart({ notify }: Props) {
           </div>
         )}
 
-        {/* HEADER BAR */}
+        {/* HEADER */}
         <div
           className="
             flex flex-col md:flex-row md:items-start md:justify-between
@@ -298,13 +297,14 @@ export default function ResolutionTimeEditableChart({ notify }: Props) {
             bg-black/30 backdrop-blur-md rounded-t-xl3
           "
         >
-          {/* left: title + subtitle */}
+          {/* left side: title / chips / desc */}
           <div className="flex-1 mb-4 md:mb-0">
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="text-white font-semibold text-sm md:text-base tracking-tight">
                 Avg Resolution Time (sec) by Day
               </div>
 
+              {/* SLA status chip */}
               <span
                 className={`
                   text-[9px] md:text-[10px] font-medium
@@ -315,18 +315,19 @@ export default function ResolutionTimeEditableChart({ notify }: Props) {
                 {inBreach ? "SLA Breach" : "Within SLA"}
               </span>
 
+              {/* SLA numeric chip */}
               <span className="text-[9px] md:text-[10px] text-black bg-mint/20 text-mint border border-mint/30 rounded-pill px-2 py-[2px] font-medium leading-none">
                 SLA {slaTarget}s
               </span>
             </div>
 
             <div className="text-textMuted text-[10px] md:text-xs mt-2 leading-relaxed max-w-md">
-              “Lower is better.” This is how long your caller has to wait for a
-              real answer, day by day.
+              “Lower is better.” This is how long a caller waits for a real
+              answer, day by day.
             </div>
           </div>
 
-          {/* right: actions */}
+          {/* right side: edit controls */}
           <div className="flex flex-col items-start gap-2 text-[10px] md:text-xs min-w-[160px]">
             {!isEditing ? (
               <button
@@ -358,12 +359,12 @@ export default function ResolutionTimeEditableChart({ notify }: Props) {
             )}
 
             <div className="text-textDim text-[10px] leading-snug">
-              Your edits are saved to Supabase for this email.
+              Your edits are saved per-email in Supabase.
             </div>
           </div>
         </div>
 
-        {/* CHART AREA */}
+        {/* CHART */}
         <div className="flex-1 w-full px-4 md:px-5 py-4">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>
@@ -425,35 +426,41 @@ export default function ResolutionTimeEditableChart({ notify }: Props) {
           </ResponsiveContainer>
         </div>
 
-        {/* EDITING PANEL */}
+        {/* EDIT MODE PANEL */}
         {isEditing && (
-          <div className="px-4 md:px-5 pb-4 border-t border-borderDim/40 bg-black/20">
-            {/* SLA config block */}
-            <div className="mb-4">
-              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-                <div>
-                  <div className="text-white font-medium text-xs md:text-sm flex items-center gap-2">
-                    SLA Target (sec)
-                    <span className="text-[9px] text-black bg-mint rounded-pill px-2 py-[2px] font-medium">
-                      Alert line
-                    </span>
-                  </div>
-                  <div className="text-textDim text-[10px] md:text-xs leading-relaxed">
-                    Calls slower than this are considered at-risk.
-                  </div>
+          <div className="border-t border-borderDim/40 bg-black/20 px-4 md:px-5 pb-4 pt-4">
+            {/* SLA Config Section */}
+            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
+              <div className="flex-1">
+                <div className="text-white font-medium text-xs md:text-sm flex items-center flex-wrap gap-2">
+                  SLA Target (sec)
+                  <span className="text-[9px] text-black bg-mint rounded-pill px-2 py-[2px] font-medium leading-none">
+                    Alert line
+                  </span>
                 </div>
 
+                <div className="text-textDim text-[10px] md:text-xs leading-relaxed mt-1 max-w-md">
+                  Anything above this is considered too slow / bad caller
+                  experience. This is the red line in the chart.
+                </div>
+              </div>
+
+              <div className="flex flex-col w-full lg:w-auto lg:min-w-[130px] lg:max-w-[150px]">
+                <label className="text-[10px] md:text-xs text-textDim mb-1.5 leading-none font-medium text-left lg:text-center">
+                  Target (sec)
+                </label>
                 <input
                   type="number"
                   min={1}
                   className="
                     rounded-lg bg-black/60
                     border border-borderDim
-                    text-white text-[10px] md:text-xs px-2 py-1
+                    text-white text-sm md:text-base
+                    px-3 py-2.5 md:py-3 text-center
                     outline-none
-                    focus:border-mint focus:ring-0
-                    transition-colors
-                    w-[100px]
+                    focus:border-mint focus:ring-1 focus:ring-mint/50
+                    transition-all
+                    hover:border-mint/30
                   "
                   value={slaTarget}
                   onChange={(e) => handleSlaChange(e.target.value)}
@@ -461,54 +468,178 @@ export default function ResolutionTimeEditableChart({ notify }: Props) {
               </div>
             </div>
 
-            {/* Per-day overrides */}
-            <div className="mb-2 text-white font-medium text-xs md:text-sm flex items-center gap-2">
-              Per-day Overrides
-              <span className="text-[9px] text-black bg-mint/20 text-mint border border-mint/30 rounded-pill px-2 py-[2px] font-medium">
-                sec
-              </span>
-            </div>
-            <div className="text-textDim text-[10px] md:text-xs leading-relaxed mb-3">
-              Update how long resolution took on each day.
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-[10px] md:text-xs">
-              {data.map((d, idx) => (
-                <div
-                  key={d.day}
-                  className="
-                    flex flex-col rounded-xl p-2 bg-black/40 border border-borderDim shadow-inner
-                  "
-                >
-                  <label className="text-textDim mb-1 font-medium tracking-tight flex items-center justify-between">
-                    <span>{d.day}</span>
-                    {inputs[idx] > slaTarget ? (
-                      <span className="text-[9px] text-red-400 font-semibold">
-                        ↑
-                      </span>
-                    ) : (
-                      <span className="text-[9px] text-mint font-semibold">
-                        ✓
-                      </span>
-                    )}
-                  </label>
-
-                  <input
-                    type="number"
-                    min={0}
-                    className="
-                      rounded-lg bg-black/60
-                      border border-borderDim
-                      text-white text-[10px] md:text-xs px-2 py-1
-                      outline-none
-                      focus:border-mint focus:ring-0
-                      transition-colors
-                    "
-                    value={inputs[idx] ?? 0}
-                    onChange={(e) => handleInputChange(idx, e.target.value)}
-                  />
+            {/* Per-day Resolution Table */}
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
+              <div>
+                <div className="text-white font-medium text-xs md:text-sm flex items-center gap-2 flex-wrap">
+                  Per-day Resolution Time
+                  <span className="text-[9px] text-black bg-mint/20 text-mint border border-mint/30 rounded-pill px-2 py-[2px] font-medium leading-none">
+                    sec
+                  </span>
                 </div>
-              ))}
+                <div className="text-textDim text-[10px] md:text-xs leading-relaxed max-w-md mt-1">
+                  Edit how long it took to actually resolve the caller’s issue
+                  each day.
+                </div>
+              </div>
+
+              <div className="text-[10px] md:text-xs text-textDim leading-relaxed">
+                <div className="flex items-center gap-4">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-mint shadow-[0_0_8px_rgba(167,243,208,0.8)]" />
+                    <span className="text-[10px] text-mint font-medium">
+                      OK
+                    </span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-red-400 shadow-[0_0_8px_rgba(255,77,77,0.6)]" />
+                    <span className="text-[10px] text-red-400 font-medium">
+                      Above SLA
+                    </span>
+                  </span>
+                </div>
+                <div className="text-[9px] text-textDim mt-1 leading-snug max-w-xs">
+                  We compare each day’s avg to your SLA line.
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="
+                rounded-xl border border-borderDim bg-black/30 backdrop-blur-sm
+                shadow-inner overflow-hidden
+              "
+            >
+              {/* header row (hidden on mobile to save space) */}
+              <div
+                className="
+                  hidden sm:grid grid-cols-[auto_1fr_auto]
+                  px-4 py-2
+                  text-xs font-medium tracking-tight
+                  text-textDim uppercase
+                  bg-black/40 border-b border-borderDim/60
+                "
+              >
+                <div>Day</div>
+                <div className="text-center">Avg Resolution (sec)</div>
+                <div className="text-right">Status</div>
+              </div>
+
+              <div className="divide-y divide-borderDim/40">
+                {data.map((d, idx) => {
+                  const val = inputs[idx] ?? 0;
+                  const slow = val > slaTarget;
+
+                  return (
+                    <div
+                      key={d.day}
+                      className="
+                        grid grid-cols-1 sm:grid-cols-[auto_1fr_auto]
+                        gap-3 sm:gap-4
+                        px-4 py-4
+                        text-xs items-center
+                        bg-black/20 hover:bg-black/30 transition-colors
+                      "
+                    >
+                      {/* Day + mobile status pill */}
+                      <div className="text-white font-semibold flex items-center justify-between sm:justify-start gap-2">
+                        <span className="text-sm md:text-base leading-none">
+                          {d.day}
+                        </span>
+
+                        <div className="sm:hidden">
+                          {slow ? (
+                            <span
+                              className="
+                                inline-flex items-center gap-1
+                                text-[10px] font-semibold
+                                text-red-400 bg-red-400/10 border border-red-400/40
+                                px-2 py-1 rounded-pill leading-none
+                              "
+                            >
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-400 shadow-[0_0_8px_rgba(255,77,77,0.8)]" />
+                              <span>{val}s</span>
+                            </span>
+                          ) : (
+                            <span
+                              className="
+                                inline-flex items-center gap-1
+                                text-[10px] font-semibold
+                                text-mint bg-mint/10 border border-mint/40
+                                px-2 py-1 rounded-pill leading-none
+                              "
+                            >
+                              <span className="h-1.5 w-1.5 rounded-full bg-mint shadow-[0_0_8px_rgba(167,243,208,0.8)]" />
+                              <span>{val}s</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Editable input */}
+                      <div className="sm:col-span-1 flex justify-start sm:justify-center">
+                        <div className="flex flex-col w-full sm:w-auto sm:min-w-[90px] sm:max-w-[110px]">
+                          <label className="text-[10px] md:text-xs text-textDim mb-1.5 leading-none text-left sm:text-center font-medium">
+                            Avg (sec)
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            className="
+                              rounded-lg bg-black/60
+                              border border-borderDim
+                              text-white text-sm md:text-base
+                              px-3 py-2.5 md:py-3 text-center
+                              outline-none
+                              focus:border-mint focus:ring-1 focus:ring-mint/50
+                              transition-all
+                              hover:border-mint/30
+                            "
+                            value={val}
+                            onChange={(e) =>
+                              handleInputChange(idx, e.target.value)
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      {/* Desktop status pill */}
+                      <div className="hidden sm:flex justify-end">
+                        {slow ? (
+                          <span
+                            className="
+                              inline-flex items-center gap-1
+                              text-[10px] font-semibold
+                              text-red-400 bg-red-400/10 border border-red-400/40
+                              px-2 py-1 rounded-pill leading-none
+                            "
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-red-400 shadow-[0_0_8px_rgba(255,77,77,0.8)]" />
+                            <span>{val}s</span>
+                          </span>
+                        ) : (
+                          <span
+                            className="
+                              inline-flex items-center gap-1
+                              text-[10px] font-semibold
+                              text-mint bg-mint/10 border border-mint/40
+                              px-2 py-1 rounded-pill leading-none
+                            "
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-mint shadow-[0_0_8px_rgba(167,243,208,0.8)]" />
+                            <span>{val}s</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="text-[9px] md:text-[10px] text-textDim leading-relaxed mt-3">
+              Slow days mean callers are waiting longer to get resolution.
+              That’s where experience degrades first.
             </div>
           </div>
         )}
