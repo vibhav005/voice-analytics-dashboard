@@ -12,7 +12,7 @@ export default function App() {
 
       {/* Routes */}
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/voice-analytics-dashboard" element={<LandingPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
       </Routes>
 
